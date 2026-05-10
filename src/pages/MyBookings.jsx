@@ -18,7 +18,7 @@ export default function MyBookings() {
       const list = await api.myBookings(auth.token);
       const arr = Array.isArray(list) ? list : list?.items || [];
       setBookings(arr);
-      const ids = [...new Set(arr.map((b) => b.event_id))];
+      const ids = [...new Set(arr.map((b) => b.event_id).filter(Boolean))];
       const map = {};
       await Promise.all(ids.map((id) => api.getEvent(id).then((e) => { map[id] = e; }).catch(() => {})));
       setEvents(map);
@@ -28,6 +28,7 @@ export default function MyBookings() {
   useEffect(() => { load(); }, []);
 
   const cancel = async (id) => {
+    setErr('');
     try { await api.cancelBooking(id, auth.token); load(); }
     catch (e) { setErr(e.message); }
   };
@@ -51,7 +52,7 @@ export default function MyBookings() {
       ) : (
         <div className="stack-y">
           {bookings.map((b) => {
-            const id = b.id || b._id;
+            const id = b.booking_id || b.id || b._id;
             const ev = events[b.event_id];
             const cancelled = b.status === 'cancelled';
             return (
@@ -65,6 +66,9 @@ export default function MyBookings() {
                     </div>
                     <div style={{ marginTop: '0.5rem' }}>
                       <span className={`badge ${cancelled ? 'danger' : 'success'}`}>{b.status}</span>
+                      {b.payment_status && (
+                        <span className="badge muted" style={{ marginLeft: '0.5rem' }}>{b.payment_status}</span>
+                      )}
                       <span className="muted" style={{ marginLeft: '0.5rem' }}>booked {fmt(b.created_at)}</span>
                     </div>
                   </div>

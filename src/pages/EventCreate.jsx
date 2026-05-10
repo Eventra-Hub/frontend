@@ -19,7 +19,13 @@ export default function EventCreate() {
     e.preventDefault();
     setErr(''); setBusy(true);
     try {
-      const created = await api.createEvent({ ...form, capacity: Number(form.capacity) }, auth.token);
+      const payload = {
+        ...form,
+        capacity: Number(form.capacity),
+        starts_at: new Date(form.starts_at).toISOString(),
+        ends_at: new Date(form.ends_at).toISOString(),
+      };
+      const created = await api.createEvent(payload, auth.token);
       nav(`/events/${created.id || created._id}`);
     } catch (ex) { setErr(ex.message); }
     finally { setBusy(false); }
@@ -35,14 +41,14 @@ export default function EventCreate() {
       </div>
       <form className="card form" style={{ maxWidth: 600 }} onSubmit={onSubmit}>
         <label>Title<input value={form.title} onChange={set('title')} required /></label>
-        <label>Description<textarea rows="4" value={form.description} onChange={set('description')} /></label>
+        <label>Description<textarea rows="4" value={form.description} onChange={set('description')} required /></label>
         <label>Category
           <select value={form.category} onChange={set('category')}>
             <option>Conference</option><option>Workshop</option>
             <option>Seminar</option><option>Meetup</option>
           </select>
         </label>
-        <label>Location<input value={form.location} onChange={set('location')} placeholder="City, Country or Online" /></label>
+        <label>Location<input value={form.location} onChange={set('location')} placeholder="City, Country or Online" required /></label>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
           <label>Starts at<input type="datetime-local" value={form.starts_at} onChange={set('starts_at')} required /></label>
           <label>Ends at<input type="datetime-local" value={form.ends_at} onChange={set('ends_at')} required /></label>

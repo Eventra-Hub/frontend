@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
+import { useAuth } from '../auth.jsx';
 
 const formatDate = (s) => {
   if (!s) return '';
@@ -14,11 +15,15 @@ const catClass = (cat = '') => {
 };
 
 export default function Events() {
+  const { auth } = useAuth();
   const [events, setEvents] = useState([]);
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('All');
+  const [mineOnly, setMineOnly] = useState(false);
+
+  const isOrganizer = auth?.role === 'organizer';
 
   useEffect(() => {
     api.listEvents()
@@ -29,10 +34,11 @@ export default function Events() {
 
   const cats = useMemo(() => ['All', ...new Set(events.map((e) => e.category).filter(Boolean))], [events]);
   const filtered = useMemo(() => events.filter((e) => {
+    if (mineOnly && isOrganizer && String(e.organizer_id) !== String(auth.id)) return false;
     if (cat !== 'All' && e.category !== cat) return false;
     if (q && !`${e.title} ${e.location} ${e.description}`.toLowerCase().includes(q.toLowerCase())) return false;
     return true;
-  }), [events, cat, q]);
+  }), [events, cat, q, mineOnly, isOrganizer, auth?.id]);
 
   if (loading) return <div className="spinner" />;
   if (err) return <div className="error">{err}</div>;
@@ -41,9 +47,16 @@ export default function Events() {
     <>
       <div className="page-head">
         <div>
-          <h1>Discover events</h1>
-          <div className="sub">{events.length} upcoming events on the platform</div>
+          <h1>{isOrganizer ? 'Manage events' : 'Discover events'}</h1>
+          <div className="sub">
+            {isOrganizer
+              ? 'Create new events or review the ones already on the platform.'
+              : `${events.length} upcoming events on the platform`}
+          </div>
         </div>
+        {isOrganizer && (
+          <Link to="/events/new"><button>+ New event</button></Link>
+        )}
       </div>
 
       <div className="toolbar">
@@ -51,6 +64,11 @@ export default function Events() {
         {cats.map((c) => (
           <button key={c} className={`chip ${cat === c ? 'active' : ''}`} onClick={() => setCat(c)}>{c}</button>
         ))}
+        {isOrganizer && (
+          <button className={`chip ${mineOnly ? 'active' : ''}`} onClick={() => setMineOnly((v) => !v)}>
+            {mineOnly ? 'My events ✓' : 'My events'}
+          </button>
+        )}
       </div>
 
       {!filtered.length ? (

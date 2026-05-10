@@ -1,15 +1,17 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth } from '../auth.jsx';
 
 export default function Login() {
-  const [email, setEmail] = useState('demo@example.com');
-  const [password, setPassword] = useState('demo');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
-  const { login } = useAuth();
+  const { loginWithToken } = useAuth();
   const nav = useNavigate();
+  const loc = useLocation();
+  const dest = loc.state?.from || '/events';
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -18,8 +20,8 @@ export default function Login() {
       const res = await api.login({ email, password });
       const token = res.access_token || res.token;
       if (!token) throw new Error('No token in response');
-      login(token);
-      nav('/events');
+      await loginWithToken(token);
+      nav(dest, { replace: true });
     } catch (ex) { setErr(ex.message); }
     finally { setBusy(false); }
   };

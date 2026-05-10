@@ -1,35 +1,28 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
+import { useAuth } from '../auth.jsx';
 
 const META = {
-  'user.registered':       { icon: '👤', color: '#06b6d4', label: 'Account created' },
-  'event.created':         { icon: '📅', color: '#4f46e5', label: 'New event' },
-  'event.updated':         { icon: '✏️', color: '#d97706', label: 'Event updated' },
-  'event.cancelled':       { icon: '❌', color: '#dc2626', label: 'Event cancelled' },
-  'registration.created':  { icon: '🎟️', color: '#16a34a', label: 'Booking confirmed' },
-  'registration.cancelled':{ icon: '🚫', color: '#9333ea', label: 'Booking cancelled' },
+  BOOKING_CONFIRMED: { icon: '🎟️', color: '#16a34a', label: 'Booking confirmed' },
+  BOOKING_CANCELLED: { icon: '🚫', color: '#9333ea', label: 'Booking cancelled' },
+  EVENT_REMINDER:    { icon: '⏰', color: '#d97706', label: 'Event reminder' },
 };
 
-const fmt = (s) => { try { return new Date(s).toLocaleString(); } catch { return s; } };
-
-const summarize = (n) => {
-  const p = n.payload || n.body || {};
-  const k = n.routing_key || n.type;
-  if (k === 'registration.created') return `Booking confirmed for event ${p.event_id || ''}`;
-  if (k === 'registration.cancelled') return `Booking cancelled for event ${p.event_id || ''}`;
-  if (k === 'event.created') return p.title ? `${p.title} was just announced` : 'A new event was published';
-  if (k === 'event.cancelled') return `Event ${p.event_id || ''} was cancelled`;
-  if (k === 'user.registered') return `Welcome ${p.email || ''}`;
-  return JSON.stringify(p);
+const fmt = (ts) => {
+  if (!ts) return '';
+  const ms = typeof ts === 'number' ? (ts < 1e12 ? ts * 1000 : ts) : Date.parse(ts);
+  try { return new Date(ms).toLocaleString(); } catch { return String(ts); }
 };
 
 export default function Notifications() {
+  const { auth } = useAuth();
   const [items, setItems] = useState([]);
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(true);
 
   const load = () => {
-    api.notifications()
+    if (!auth?.id) return;
+    api.notifications(auth.id)
       .then((d) => setItems(Array.isArray(d) ? d : d?.items || []))
       .catch((e) => setErr(e.message))
       .finally(() => setLoading(false));
@@ -38,7 +31,7 @@ export default function Notifications() {
     load();
     const t = setInterval(load, 10000);
     return () => clearInterval(t);
-  }, []);
+  }, [auth?.id]);
 
   if (loading) return <div className="spinner" />;
 
@@ -47,7 +40,7 @@ export default function Notifications() {
       <div className="page-head">
         <div>
           <h1>Notifications</h1>
-          <div className="sub">Live feed from the platform · refreshes every 10s</div>
+          <div className="sub">Live feed · refreshes every 10s</div>
         </div>
         <button className="ghost" onClick={load}>Refresh</button>
       </div>
@@ -60,16 +53,16 @@ export default function Notifications() {
       ) : (
         <div className="card" style={{ padding: 0 }}>
           {items.map((n, i) => {
-            const k = n.routing_key || n.type || 'event';
+            const k = n.notification_type || 'EVENT_REMINDER';
             const meta = META[k] || { icon: '•', color: '#6b7280', label: k };
             return (
-              <div className="notification-row" key={n.id || n._id || i}>
+              <div className="notification-row" key={n.notification_id || i}>
                 <div className="dot" style={{ background: meta.color }}>{meta.icon}</div>
                 <div className="body">
                   <div className="title">{meta.label}</div>
-                  <div className="desc">{summarize(n)}</div>
+                  <div className="desc">{n.message}</div>
                 </div>
-                <div className="when">{fmt(n.created_at || n.timestamp)}</div>
+                <div className="when">{fmt(n.timestamp)}</div>
               </div>
             );
           })}

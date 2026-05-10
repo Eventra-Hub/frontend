@@ -3,27 +3,27 @@ import { api } from '../api.js';
 import { useAuth } from '../auth.jsx';
 
 export default function Profile() {
-  const { auth } = useAuth();
+  const { auth, refresh } = useAuth();
   const [profile, setProfile] = useState(null);
   const [err, setErr] = useState('');
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    api.getMyProfile(auth.token)
-      .catch(() => api.getProfile(auth.id, auth.token))
-      .then(setProfile)
-      .catch((e) => setErr(e.message));
+    api.me(auth.token).then(setProfile).catch((e) => setErr(e.message));
   }, []);
 
   const save = async (e) => {
     e.preventDefault();
     setBusy(true); setErr(''); setMsg('');
     try {
-      const updated = await api.updateProfile(profile.id || profile._id || auth.id,
-        { name: profile.name, bio: profile.bio, avatar_url: profile.avatar_url }, auth.token);
+      const updated = await api.updateProfile(
+        { name: profile.name || '', bio: profile.bio || '', avatar_url: profile.avatar_url || '' },
+        auth.token,
+      );
       setProfile(updated);
       setMsg('Profile saved.');
+      refresh();
     } catch (ex) { setErr(ex.message); }
     finally { setBusy(false); }
   };
@@ -51,7 +51,7 @@ export default function Profile() {
         <div>
           <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>{profile.name || 'Unnamed user'}</div>
           <div className="muted">{profile.email}</div>
-          {profile.role && <span className="badge muted" style={{ marginTop: 4 }}>{profile.role}</span>}
+          {profile.role && <span className="badge muted" style={{ marginTop: 4, textTransform: 'capitalize' }}>{profile.role}</span>}
         </div>
       </div>
       <form className="card form" style={{ maxWidth: 520 }} onSubmit={save}>
