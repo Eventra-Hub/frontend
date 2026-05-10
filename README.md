@@ -14,13 +14,23 @@ Demo login (mock mode): `demo@example.com` / `demo`.
 ## Mock vs live
 The app starts in **mock mode** by default — all API calls hit an in-memory store in `src/mock.js` so you can develop the UI without backends. To call the real services, set `VITE_USE_MOCK=false` in `.env`. The `api` import from `src/api.js` swaps implementations transparently — page code is identical in both modes.
 
-## Service endpoints (defaults)
-| Var | Service | Default |
-|-----|---------|---------|
-| `VITE_REG_URL`   | registration-service (auth + bookings) | `http://localhost:8003` |
-| `VITE_USER_URL`  | user-service (profiles)                | `http://localhost:8001` |
-| `VITE_EVENT_URL` | event-service                          | `http://localhost:8002` |
-| `VITE_NOTIF_URL` | notification-service                   | `http://localhost:8004` |
+## Service endpoints
+Each backend env publishes a different host-port range (see `infra/compose/docker-compose.{dev,test,prod}.yml`). Copy the matching example file to `.env`:
+
+| Env  | Compose file                  | Example env file       | Port range |
+|------|-------------------------------|------------------------|------------|
+| dev  | `docker-compose.dev.yml`      | `.env.example`         | 8001–8004  |
+| test | `docker-compose.test.yml`     | `.env.test.example`    | 8101–8104  |
+| prod | `docker-compose.prod.yml`     | `.env.prod.example`    | 8201–8204  |
+
+| Var | Service |
+|-----|---------|
+| `VITE_REG_URL`   | registration-service (auth + bookings) |
+| `VITE_USER_URL`  | user-service (profiles)                |
+| `VITE_EVENT_URL` | event-service                          |
+| `VITE_NOTIF_URL` | notification-service                   |
+
+The base `infra/compose/docker-compose.yml` no longer publishes ports — host ports come from the per-env override file, so always run compose with both files, e.g. `docker compose -f docker-compose.yml -f docker-compose.dev.yml up`.
 
 ## Pages
 - `/login`, `/signup` — auth via registration-service
